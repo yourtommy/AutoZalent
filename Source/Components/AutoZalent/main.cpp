@@ -1,4 +1,3 @@
-#include <QtGui/QApplication>
 #include "autozalent.h"
 
 int main(int argc, char *argv[])

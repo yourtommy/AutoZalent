@@ -1,8 +1,6 @@
 #ifndef AUTOZALENT_H
 #define AUTOZALENT_H
 
-#include <QMainWindow>
-
 namespace Ui {
     class AutoZalent;
 }
