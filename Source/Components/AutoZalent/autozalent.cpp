@@ -1,8 +1,9 @@
 #include "autozalent.h"
+#include "addin.h"
 #include "ui_autozalent.h"
 
-AutoZalent::AutoZalent(QWidget *parent) :
-    QMainWindow(parent),
+AutoZalent::AutoZalent(QWidget *pParent) :
+    QMainWindow(pParent),
     ui(new Ui::AutoZalent)
 {
     ui->setupUi(this);

@@ -10,7 +10,7 @@ class AutoZalent : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit AutoZalent(QWidget *parent = 0);
+    explicit AutoZalent(QWidget *pParent = 0);
     ~AutoZalent();
 
 private:

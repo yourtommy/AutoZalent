@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui xml
 
 TARGET = AutoZalent
 TEMPLATE = app
@@ -25,9 +25,15 @@ precompile_header : !isEmpty($$PRECOMPILED_HEADER) {
 }
 
 SOURCES += main.cpp\
-        autozalent.cpp
+        autozalent.cpp \
+    addin.cpp \
+    addinmanager.cpp \
+    addinxmler.cpp
 
 HEADERS  += autozalent.h \
-    pch.h
+    pch.h \
+    addin.h \
+    addinmanager.h \
+    addinxmler.h
 
 FORMS    += autozalent.ui
