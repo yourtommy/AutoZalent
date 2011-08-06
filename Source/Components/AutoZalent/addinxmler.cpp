@@ -1,46 +1,146 @@
+/* AddIn xml structure
+<AddIns>
+    <AddIn FileName=”FileName” >
+        <Commands>
+            <Command Id=”CommandId” Startup=”True” />
+            <Command Id=”CommandId2” Startup=”False” />
+            <Command Starup=”True”>ID_Command3</Command>
+            <Command>ID_Command4</Command> <!--startup is fasle by default-->
+        </Commands>
+        <Handlers>
+            <Execute>Execute</Execute>
+            <IsCheckable /> <!--default value: false-->
+            <IsChecked /> <!--default value: false-->
+            <IsEnabled /> <!--default value: true-->
+            <IsVisible /> <!--default value: true-->
+        </Handlers>
+    </AddIn>
+    <AddIn>
+        <Commands>
+            <Command Id=”ID_Command5”/>
+        </Commands>
+    </AddIn>
+</AddIns>
+*/
+
 #include "addinxmler.h"
 
 AddInXmler::AddInXmler()
 {
 }
 
-bool AddInXmler::ParseFile(const QString& sFileName)
+QSharedPointer<AddInXmler::AddInList> AddInXmler::ParseFile(const QString& sFileName) throw(Exception)
 {
+    QSharedPointer<AddInList> oAddIns;
+
     QDomDocument oDoc("AddInDocument");
     QFile oFile(sFileName);
     if (!oFile.open(QIODevice::ReadOnly))
-        return false;
+    {
+//        throw FileNotFound(sFileName);
+        return oAddIns;
+    }
 
     if (!oDoc.setContent(&oFile))
     {
         oFile.close();
-        return false;
+//        throw InvalidContent(sFileName);
+        return oAddIns;
     }
     oFile.close();
 
-    QDomElement oAddinsElement = oDoc.documentElement();
-    if (oAddinsElement.tagName() != "AddIns")
+    QDomElement oAddInsElement = oDoc.documentElement();
+    if (oAddInsElement.tagName() != "AddIns")
     {
-//        emit ParseFileFailed(sFileName);
-        return false;
+//        throw ElementNotFound(sFileName, "AddIns");
+        return oAddIns;
     }
 
-    QDomNode n = oAddinsElement.firstChild();
-    QString message;
-    while(!n.isNull()) {
-        QDomElement e = n.toElement(); // try to convert the node to an element.
-        if(!e.isNull()) {
-            message += e.tagName() + "\n"; // the node really is an element.
+    QDomNode oAddInNode = oAddInsElement.firstChild();
+    while(!oAddInNode.isNull()) {
+        QSharedPointer<AddIn> oAddIn = ParseAddIn(oAddInNode.toElement());
+        oAddIns->append(oAddIn);
+        oAddInNode = oAddInNode.nextSibling();
+    }    
+
+    return oAddIns;
+}
+
+QSharedPointer<AddIn> AddInXmler::ParseAddIn(const QDomElement &oAddInElement)
+{
+    QSharedPointer<AddIn> oAddIn;
+
+    Q_ASSERT(!oAddInElement.isNull());
+    if(oAddInElement.isNull())
+        return oAddIn;
+
+    Q_ASSERT(oAddInElement.tagName() == "AddIn");
+    if (oAddInElement.tagName() != "AddIn")
+        return oAddIn;
+
+    QString sFileName = oAddInElement.attribute("FileName");
+    if (sFileName.isEmpty())
+        return oAddIn;
+
+    oAddIn = QSharedPointer<AddIn>(new AddIn(sFileName));
+
+    QDomNode oNode = oAddInElement.firstChild();
+    while(!oNode.isNull())
+    {
+        QDomElement oElement = oNode.toElement();
+        if (!oElement.isNull())
+        {
+            if (oElement.tagName() == "Commands")
+                FillCommands(oAddIn, oElement);
+            else if (oElement.tagName() == "Hanlders")
+                FillHandlers(oAddIn, oElement);
         }
-        n = n.nextSibling();
+        oNode = oNode.nextSibling();
     }
 
-//    QMessageBox::information(NULL, "OK", message);
+    return oAddIn;
+}
 
-//    // Here we append a new element to the end of the document
-//    QDomElement elem = oDoc.createElement("img");
-//    elem.setAttribute("src", "myimage.png");
-//    oAddinsElement.appendChild(elem);
+void AddInXmler::FillCommands(QSharedPointer<AddIn>& oAddIn, const QDomElement &oCommandsElement)
+{
+    QDomNode oCommandNode = oCommandsElement.firstChild();
+    while(!oCommandNode.isNull())
+    {
+        QDomElement oCommandElement = oCommandNode.toElement();
+        if (!oCommandElement.isNull())
+        {
+            if (oCommandElement.tagName() == "Command")
+            {
+                QString sCommandId = oCommandElement.attribute("Id");
+                QString sStartup = oCommandElement.attribute("Startup");
+                bool bStartup = !sStartup.isEmpty() && sStartup.compare("True", Qt::CaseInsensitive) == 0;
+                oAddIn->RegisterCommand(sCommandId, bStartup);
+            }
+        }
+        oCommandNode = oCommandNode.nextSibling();
+    }
+}
 
-    return true;
+void AddInXmler::FillHandlers(QSharedPointer<AddIn>& oAddIn, const QDomElement &oHanldersElement)
+{
+    QDomNode oHnadlerNode = oHanldersElement.firstChild();
+    while(!oHnadlerNode.isNull())
+    {
+        QDomElement oHandlerElement = oHnadlerNode.toElement();
+        if (!oHandlerElement.isNull() && !oHandlerElement.text().isEmpty())
+        {
+            QString sHandler = oHandlerElement.tagName();
+            if (sHandler == "Execute")
+                oAddIn->SetExecuteHandler(sHandler);
+            else if (sHandler == "IsCheckable")
+                oAddIn->SetIsCheckableHandler(sHandler);
+            else if (sHandler == "IsChecked")
+                oAddIn->SetIsCheckedHandler(sHandler);
+            else if (sHandler == "IsEnabled")
+                oAddIn->SetIsEnabledHanlder(sHandler);
+            else if (sHandler == "IsVisible")
+                oAddIn->SetIsVisibleHandler(sHandler);
+        }
+        oHnadlerNode = oHnadlerNode.nextSibling();
+    }
 }

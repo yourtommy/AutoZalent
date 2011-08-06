@@ -3,15 +3,6 @@
 
 #include "addin.h"
 
-struct Command
-{
-    QString msId;
-    bool mbIsCheckable;
-    bool mbIsChecked;
-    bool mbIsEnabled;
-    bool mbIsVisible;
-};
-
 class AddInManager : public QObject
 {
     Q_OBJECT
