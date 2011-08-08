@@ -25,37 +25,26 @@
 
 #include "addinxmler.h"
 
-AddInXmler::AddInXmler()
+AddInXmler::AddInXmler(const QString& sFileName)
+    : msFileName(sFileName)
 {
 }
 
-QSharedPointer<AddInXmler::AddInList> AddInXmler::ParseFile(const QString& sFileName) throw(Exception)
+QSharedPointer<AddInXmler::AddInList> AddInXmler::Parse() throw(Exception)
 {
-    QSharedPointer<AddInList> oAddIns;
+    QFile oFile(msFileName);
+    if (!oFile.open(QIODevice::ReadOnly))
+        throw MissingFileException(msFileName);
 
     QDomDocument oDoc("AddInDocument");
-    QFile oFile(sFileName);
-    if (!oFile.open(QIODevice::ReadOnly))
-    {
-//        throw FileNotFound(sFileName);
-        return oAddIns;
-    }
-
     if (!oDoc.setContent(&oFile))
-    {
-        oFile.close();
-//        throw InvalidContent(sFileName);
-        return oAddIns;
-    }
-    oFile.close();
+        throw InvalidContentException(msFileName);
 
     QDomElement oAddInsElement = oDoc.documentElement();
-    if (oAddInsElement.tagName() != "AddIns")
-    {
-//        throw ElementNotFound(sFileName, "AddIns");
-        return oAddIns;
-    }
+    if (oAddInsElement.tagName().compare("AddIns", Qt::CaseInsensitive) != 0)
+        throw UnexpectedElementException(msFileName, oAddInsElement.lineNumber(), oAddInsElement.columnNumber(), "AddIns", oAddInsElement.tagName());
 
+    QSharedPointer<AddInList> oAddIns(new AddInList);
     QDomNode oAddInNode = oAddInsElement.firstChild();
     while(!oAddInNode.isNull()) {
         QSharedPointer<AddIn> oAddIn = ParseAddIn(oAddInNode.toElement());
@@ -70,19 +59,17 @@ QSharedPointer<AddIn> AddInXmler::ParseAddIn(const QDomElement &oAddInElement)
 {
     QSharedPointer<AddIn> oAddIn;
 
-    Q_ASSERT(!oAddInElement.isNull());
     if(oAddInElement.isNull())
-        return oAddIn;
+        throw UnexpectedElementException(msFileName, oAddInElement.lineNumber(), oAddInElement.columnNumber(), "AddIn", "");
 
-    Q_ASSERT(oAddInElement.tagName() == "AddIn");
-    if (oAddInElement.tagName() != "AddIn")
-        return oAddIn;
+    if (oAddInElement.tagName().compare("AddIn", Qt::CaseInsensitive) != 0)
+        throw UnexpectedElementException(msFileName, oAddInElement.lineNumber(), oAddInElement.columnNumber(), "AddIn", oAddInElement.tagName());
 
-    QString sFileName = oAddInElement.attribute("FileName");
-    if (sFileName.isEmpty())
-        return oAddIn;
+    QString sAddInFileName = oAddInElement.attribute("FileName");
+    if (sAddInFileName.isEmpty())
+        throw MissingAttributeException(msFileName, oAddInElement.lineNumber(), oAddInElement.columnNumber(), "FileName", "AddIn");
 
-    oAddIn = QSharedPointer<AddIn>(new AddIn(sFileName));
+    oAddIn = QSharedPointer<AddIn>(new AddIn(sAddInFileName));
 
     QDomNode oNode = oAddInElement.firstChild();
     while(!oNode.isNull())
@@ -90,9 +77,9 @@ QSharedPointer<AddIn> AddInXmler::ParseAddIn(const QDomElement &oAddInElement)
         QDomElement oElement = oNode.toElement();
         if (!oElement.isNull())
         {
-            if (oElement.tagName() == "Commands")
+            if (oElement.tagName().compare("Commands", Qt::CaseInsensitive) == 0)
                 FillCommands(oAddIn, oElement);
-            else if (oElement.tagName() == "Hanlders")
+            else if (oElement.tagName().compare("Hanlders", Qt::CaseInsensitive) == 0)
                 FillHandlers(oAddIn, oElement);
         }
         oNode = oNode.nextSibling();
@@ -109,9 +96,11 @@ void AddInXmler::FillCommands(QSharedPointer<AddIn>& oAddIn, const QDomElement &
         QDomElement oCommandElement = oCommandNode.toElement();
         if (!oCommandElement.isNull())
         {
-            if (oCommandElement.tagName() == "Command")
+            if (oCommandElement.tagName().compare("Command", Qt::CaseInsensitive) == 0)
             {
                 QString sCommandId = oCommandElement.attribute("Id");
+                if (sCommandId.isEmpty())
+                    throw MissingAttributeException(msFileName, oCommandElement.lineNumber(), oCommandElement.columnNumber(), "Id", oCommandElement.tagName());
                 QString sStartup = oCommandElement.attribute("Startup");
                 bool bStartup = !sStartup.isEmpty() && sStartup.compare("True", Qt::CaseInsensitive) == 0;
                 oAddIn->RegisterCommand(sCommandId, bStartup);
@@ -130,15 +119,15 @@ void AddInXmler::FillHandlers(QSharedPointer<AddIn>& oAddIn, const QDomElement &
         if (!oHandlerElement.isNull() && !oHandlerElement.text().isEmpty())
         {
             QString sHandler = oHandlerElement.tagName();
-            if (sHandler == "Execute")
+            if (sHandler.compare("Execute", Qt::CaseInsensitive) == 0)
                 oAddIn->SetExecuteHandler(sHandler);
-            else if (sHandler == "IsCheckable")
+            else if (sHandler.compare("IsCheckable", Qt::CaseInsensitive) == 0)
                 oAddIn->SetIsCheckableHandler(sHandler);
-            else if (sHandler == "IsChecked")
+            else if (sHandler.compare("IsChecked", Qt::CaseInsensitive) == 0)
                 oAddIn->SetIsCheckedHandler(sHandler);
-            else if (sHandler == "IsEnabled")
+            else if (sHandler.compare("IsEnabled", Qt::CaseInsensitive) == 0)
                 oAddIn->SetIsEnabledHanlder(sHandler);
-            else if (sHandler == "IsVisible")
+            else if (sHandler.compare("IsVisible", Qt::CaseInsensitive) == 0)
                 oAddIn->SetIsVisibleHandler(sHandler);
         }
         oHnadlerNode = oHnadlerNode.nextSibling();

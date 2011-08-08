@@ -28,12 +28,14 @@ SOURCES += main.cpp\
         autozalent.cpp \
     addin.cpp \
     addinmanager.cpp \
-    addinxmler.cpp
+    addinxmler.cpp \
+    exception.cpp
 
 HEADERS  += autozalent.h \
     pch.h \
     addin.h \
     addinmanager.h \
-    addinxmler.h
+    addinxmler.h \
+    exception.h
 
 FORMS    += autozalent.ui
